@@ -1,0 +1,218 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text to Speech Conversion</title>
+    <!-- Include Font Awesome CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background-color: antiquewhite;
+            border: 2px red solid;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+        .button-container {
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 0 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            border: none;
+            background-color: #007bff;
+            color: #fff;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #ef0612;
+        }
+        #text-to-speak {
+            margin-top: 20px;
+            font-size: 1.5rem;
+            background-color: aquamarine;
+            padding: 30px;
+            border: 2px solid black;
+            border-radius: 10px;
+            height: 100px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        footer {
+            margin-top: 20px;
+            font-size: 0.875rem;
+        }
+        @media (max-width: 768px) {
+            .container {
+                width: 90%;
+                margin-top: 30px;
+                padding: 15px;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
+            button {
+                padding: 8px 16px;
+                font-size: 0.875rem;
+            }
+            #text-to-speak {
+                font-size: 1.25rem;
+                padding: 20px;
+                height: auto;
+            }
+        }
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.25rem;
+            }
+            button {
+                margin: 5px;
+                font-size: 0.75rem;
+                padding: 6px 12px;
+            }
+            #text-to-speak {
+                font-size: 1rem;
+                padding: 15px;
+            }
+            footer {
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Convert Text to Speech</h1>
+        <textarea id="text-to-speak" placeholder="Enter text to convert to speech"></textarea>
+        <div class="button-container">
+            <button onclick="startSpeaking()">
+               <i class="fa fa-play"></i> Speak
+            </button>
+            <button onclick="stopSpeaking()">
+                <i class="fa fa-stop"></i> Stop
+            </button>
+            <button onclick="toggleRecording()">
+                <i class="fa fa-circle"></i> Record
+            </button>
+            <button onclick="downloadRecording()" id="downloadBtn" style="display: none;">
+                <i class="fa fa-download"></i> Download
+            </button>
+        </div>
+        <footer>
+            <p>&copy; 2024</p>
+            <p>amaarkhan25@gmail.com</p>
+        </footer>
+    </div>
+
+    <script>
+        const synth = window.speechSynthesis;
+        let utterance;
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+
+        function startSpeaking() {
+            const text = document.getElementById('text-to-speak').value;
+            if (text) {
+                utterance = new SpeechSynthesisUtterance(text);
+                synth.speak(utterance);
+            }
+        }
+
+        function stopSpeaking() {
+            if (synth.speaking) {
+                synth.cancel();
+            }
+        }
+
+        function toggleRecording() {
+            if (!isRecording) {
+                startRecording();
+            } else {
+                stopRecording();
+            }
+        }
+
+        function startRecording() {
+            const text = document.getElementById('text-to-speak').value;
+            if (text) {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const dest = audioContext.createMediaStreamDestination();
+                const source = audioContext.createMediaStreamSource(dest.stream);
+                mediaRecorder = new MediaRecorder(dest.stream);
+
+                utterance = new SpeechSynthesisUtterance(text);
+                const utterThis = new SpeechSynthesisUtterance(text);
+                const synthUtterance = new SpeechSynthesisUtterance(text);
+                synthUtterance.onstart = function() {
+                    mediaRecorder.start();
+                    isRecording = true;
+                    document.querySelector('button[onclick="toggleRecording()"]').innerHTML = '<i class="fa fa-stop-circle"></i> Stop Recording';
+                };
+                synthUtterance.onend = function() {
+                    mediaRecorder.stop();
+                    isRecording = false;
+                    document.querySelector('button[onclick="toggleRecording()"]').innerHTML = '<i class="fa fa-circle"></i> Record';
+                    document.getElementById('downloadBtn').style.display = 'inline-block';
+                };
+
+                mediaRecorder.ondataavailable = function(event) {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = function() {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const audio = new Audio(audioUrl);
+                    const link = document.createElement('a');
+                    link.href = audioUrl;
+                    link.download = 'recording.wav';
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                };
+
+                synth.speak(synthUtterance);
+            }
+        }
+
+        function stopRecording() {
+            if (isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                document.querySelector('button[onclick="toggleRecording()"]').innerHTML = '<i class="fa fa-circle"></i> Record';
+                document.getElementById('downloadBtn').style.display = 'inline-block';
+            }
+        }
+
+        function downloadRecording() {
+            if (audioChunks.length > 0) {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const link = document.createElement('a');
+                link.href = audioUrl;
+                link.download = 'recording.wav';
+                link.click();
+            }
+        }
+    </script>
+</body>
+</html>
